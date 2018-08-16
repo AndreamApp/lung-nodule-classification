@@ -1,0 +1,35 @@
+truncate between -1000 to 500, image[<-1000]=0, image[>500]=0, cut image before normalization
+start time: 2018-08-16 12:07:49
+cubic shape: (10, 20, 20)
+Training examples: 3808, high 1812, low 1812
+Testing examples: 424, high 204, low 204
+epoch: 120
+batch size: 32
+accuracy  is 0.518868 loss is 0.692490 epoch 0 time consumed 82.33 seconds
+accuracy  is 0.518868 loss is 0.692437 epoch 1 time consumed 80.95 seconds
+accuracy  is 0.518868 loss is 0.692470 epoch 2 time consumed 78.47 seconds
+accuracy  is 0.518868 loss is 0.692443 epoch 3 time consumed 83.40 seconds
+accuracy  is 0.518868 loss is 0.692443 epoch 4 time consumed 81.04 seconds
+accuracy  is 0.518868 loss is 0.692438 epoch 5 time consumed 80.97 seconds
+accuracy  is 0.518868 loss is 0.692517 epoch 6 time consumed 81.62 seconds
+accuracy  is 0.518868 loss is 0.692481 epoch 7 time consumed 84.28 seconds
+accuracy  is 0.518868 loss is 0.692447 epoch 8 time consumed 83.09 seconds
+accuracy  is 0.518868 loss is 0.692441 epoch 9 time consumed 81.59 seconds
+accuracy  is 0.518868 loss is 0.692436 epoch 10 time consumed 78.23 seconds
+accuracy  is 0.518868 loss is 0.692508 epoch 11 time consumed 80.05 seconds
+accuracy  is 0.518868 loss is 0.692459 epoch 12 time consumed 81.27 seconds
+accuracy  is 0.518868 loss is 0.692557 epoch 13 time consumed 79.20 seconds
+accuracy  is 0.518868 loss is 0.692484 epoch 14 time consumed 80.09 seconds
+accuracy  is 0.518868 loss is 0.692594 epoch 15 time consumed 81.16 seconds
+accuracy  is 0.518868 loss is 0.692476 epoch 16 time consumed 81.78 seconds
+accuracy  is 0.518868 loss is 0.692437 epoch 17 time consumed 80.65 seconds
+accuracy  is 0.518868 loss is 0.692471 epoch 18 time consumed 80.72 seconds
+accuracy  is 0.518868 loss is 0.692436 epoch 19 time consumed 82.46 seconds
+accuracy  is 0.518868 loss is 0.692576 epoch 20 time consumed 77.95 seconds
+accuracy  is 0.518868 loss is 0.692466 epoch 21 time consumed 80.11 seconds
+accuracy  is 0.518868 loss is 0.692441 epoch 22 time consumed 78.00 seconds
+accuracy  is 0.518868 loss is 0.692492 epoch 23 time consumed 80.04 seconds
+accuracy  is 0.518868 loss is 0.692435 epoch 24 time consumed 81.03 seconds
+accuracy  is 0.518868 loss is 0.692439 epoch 25 time consumed 80.10 seconds
+accuracy  is 0.518868 loss is 0.692496 epoch 26 time consumed 80.10 seconds
+accuracy  is 0.518868 loss is 0.692445 epoch 27 time consumed 80.64 seconds
