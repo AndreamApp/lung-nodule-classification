@@ -15,13 +15,11 @@ from dataprepare import get_batch, get_train_and_test_filename, get_batch_withla
     get_batch_withlabels_high
 import random
 import sys
+import time
+import datetime
+import os
 import tools
-from tools import *
-
-tensorboard_path = tools.tensorboard_path
-ckpt_path = tools.ckpt_path
-
-log('truncate between -1000 to 350, image[<-1000]=0, image[>350]=0')
+from tools import log, logtime, count_high, count_low
 
 class model(object):
 
@@ -107,23 +105,26 @@ class model(object):
             # print(out_fc2)
             return out_fc2
 
-    def inference(self, npy_path, model_index, test_size, seed, train_flag=True):
+    def inference(self, base_dir, model_index, test_size, seed, train_flag=True, test_iterator=80):
         # some statistic index
         highest_acc = 0.0
         highest_iterator = 1
 
-        train_filenames, test_filenames = get_train_and_test_filename(npy_path, test_size, seed)
+        dir = tools.workspace(base_dir)
+
+        train_filenames, test_filenames = get_train_and_test_filename(dir.npy_path, test_size, seed)
         # how many time should one epoch should loop to feed all data
         times = len(train_filenames) // self.batch_size
         if (len(train_filenames) % self.batch_size) != 0:
             times = times + 1
 
-        logtime('start time: ')
+        log('input npy dir: %s' % dir.npy_path)
         log('cubic shape: (%d, %d, %d)' % (self.cubic_shape[model_index][0], self.cubic_shape[model_index][1], self.cubic_shape[model_index][2]))
         log("Training examples: %d, high %d, low %d" % (len(train_filenames), count_high(train_filenames), count_low(train_filenames)))
         log("Testing examples: %d, high %d, low %d" % (len(test_filenames), count_high(test_filenames), count_low(test_filenames)))
         log('epoch: %d' % self.epoch)
         log('batch size: %d' % self.batch_size)
+        logtime('start time: ')
         # keep_prob used for dropout
         keep_prob = tf.placeholder(tf.float32)
         # take placeholder as input
@@ -148,8 +149,9 @@ class model(object):
         x_image = tf.reshape(x, [-1, self.cubic_shape[model_index][0], self.cubic_shape[model_index][1],
                                  self.cubic_shape[model_index][2], 1])
         net_out = self.archi_1(x_image, sphericity, margin, lobulation, spiculation, keep_prob)
-        print(net_out)
-        saver = tf.train.Saver()  # default to save all variable,save mode or restore from path
+        # print(net_out)
+        # save all epoch results
+        saver = tf.train.Saver(max_to_keep=self.epoch)  # default to save all variable,save mode or restore from path
 
         if train_flag:
             global_step = tf.Variable(0)
@@ -158,7 +160,7 @@ class model(object):
 
             # softmax layer
             real_label = tf.placeholder(tf.float32, [None, 2])
-            cross_entropy = tf.nn.softmax_cross_entropy_with_logits_v2(logits=net_out, labels=real_label)
+            cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=net_out, labels=real_label)
             # cross_entropy = -tf.reduce_sum(real_label * tf.log(net_out))
             net_loss = tf.reduce_mean(cross_entropy)
 
@@ -177,7 +179,7 @@ class model(object):
                 # sess = tf_debug.LocalCLIDebugWrapperSession(sess)
                 # sess.add_tensor_filter("has_inf_or_nan", tf_debug.has_inf_or_nan)
                 sess.run(tf.global_variables_initializer())
-                train_writer = tf.summary.FileWriter(tensorboard_path, sess.graph)
+                train_writer = tf.summary.FileWriter(dir.tensorboard_path, sess.graph)
                 # loop epoches
                 for i in range(self.epoch):
                     epoch_start = time.time()
@@ -190,8 +192,8 @@ class model(object):
                             sys.stdout.flush()
 
                         batch_files = train_filenames[t * self.batch_size:(t + 1) * self.batch_size]
-                        batch_data, sphericityt, margint, lobulationt, spiculationt, batch_label = get_batch_withlabels(
-                            batch_files)
+                        batch_data, sphericityt, margint, lobulationt, spiculationt, batch_label = \
+                            get_batch_withlabels(dir.npy_path, batch_files)
                         feed_dict = {x: batch_data, sphericity: sphericityt, margin: margint, lobulation: lobulationt,
                                      spiculation: spiculationt, real_label: batch_label, keep_prob: self.keep_prob}
                         _, summary, out_res = sess.run([train_step, merged, net_out], feed_dict=feed_dict)
@@ -203,12 +205,12 @@ class model(object):
                         if t == times - 1:
                             print('\nlearning rate: ', lnrt)
                         train_writer.add_summary(summary, i)
-                        saver.save(sess, ckpt_path, global_step=i + 1)
+                        saver.save(sess, dir.ckpt_path + 'ckpt', global_step=i + 1)
 
                     epoch_end = time.time()
                     # randomtestfiles = random.sample(test_filenames, 32)
-                    test_batch, sphericityt, margint, lobulationt, spiculationt, test_label = get_batch_withlabels(
-                        test_filenames)
+                    test_batch, sphericityt, margint, lobulationt, spiculationt, test_label = \
+                        get_batch_withlabels(dir.npy_path, test_filenames)
                     # print(test_label)
 
                     x10 = 0
@@ -221,11 +223,14 @@ class model(object):
                     print('percent: ', x10 / len(test_label))
                     # f.write('percent: %f ' % x10 / 16)
                     test_dict = {x: test_batch, sphericity: sphericityt, margin: margint, lobulation: lobulationt,
-                                 spiculation: spiculationt, real_label: test_label, keep_prob: self.keep_prob}
+                                 spiculation: spiculationt, real_label: test_label, keep_prob: 1.0}  # use 1.0 as keep_prob for testing
                     acc_test, loss = sess.run([accruacy, net_loss], feed_dict=test_dict)
 
-                    log('accuracy  is %f, loss is %f, epoch %d time, consumed %.2f seconds' %
+                    log('accuracy is %f, loss is %f, epoch %d time, consumed %.2f seconds' %
                         (acc_test, loss, i, (epoch_end - epoch_start)))
+                    # estimate end time
+                    end_time = datetime.datetime.now() + datetime.timedelta(seconds=(epoch_end - epoch_start) * (self.epoch - i - 1))
+                    print('will end at %s' % end_time.strftime('%H:%M:%S'))
 
                     if acc_test > highest_acc:
                         highest_acc = acc_test
@@ -242,44 +247,45 @@ class model(object):
 
             prediction = tf.nn.softmax(net_out)
             correct_prediction = tf.equal(tf.argmax(prediction, 1), tf.argmax(real_label, 1))
-            accruacy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
-            with tf.Session() as sess:
+            accruacy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+            # allow memory allocation growth
+            config = tf.ConfigProto()
+            # config.gpu_options.per_process_gpu_memory_fraction = 0.4
+            config.gpu_options.allow_growth = True
+            with tf.Session(config=config) as sess:
                 # saver = tf.train.import_meta_graph('ckpt/archi-1-40.meta')
                 # saver.restore("/ckpt/archi-1-40.data-00000-of-00001")
                 # sess = tf_debug.LocalCLIDebugWrapperSession(sess)
                 # sess.add_tensor_filter("has_inf_or_nan", tf_debug.has_inf_or_nan)
                 sess.run(tf.global_variables_initializer())
-                saver = tf.train.import_meta_graph('./fully_ckpt/fully-120.meta')
-                saver.restore(sess, tf.train.latest_checkpoint('./fully_ckpt/'))
+                meta_path = dir.ckpt_path + 'ckpt-%d.meta' % test_iterator
+                print('meta_path: ', meta_path)
+                saver = tf.train.import_meta_graph(meta_path)
+                saver.restore(sess, tf.train.latest_checkpoint(dir.ckpt_path))
                 # test_filenames = get_high_data(npy_path)
-                test_filenamesX = []
-                for onefile in test_filenames:
-                    if 'low' in onefile:
-                        test_filenamesX.append(onefile)
-                    # if 'high' in onefile:
-                    #     test_filenamesX.append(onefile)
+                # test_filenamesX = []
+                # for onefile in test_filenames:
+                #     if 'low' in onefile:
+                #         test_filenamesX.append(onefile)
+                #     if 'high' in onefile:
+                #         test_filenamesX.append(onefile)
 
                 # testnum = len(test_filenamesX) // self.epoch
-                print('test ', len(test_filenamesX))
-                # loop epoches
-                for i in range(10):
-                    epoch_start = time.time()
-                    #  the data will be shuffled by every epoch
-                    for t in range(times):
-                        print(t)
-                        batch_files = test_filenamesX[t * self.batch_size:(t + 1) * self.batch_size]
-                        test_batch, sphericityt, margint, lobulationt, spiculationt, test_label = get_batch_withlabels(
-                            test_filenamesX)
-                        test_dict = {x: test_batch, sphericity: sphericityt, margin: margint, lobulation: lobulationt,
-                                     spiculation: spiculationt, real_label: test_label, keep_prob: self.keep_prob}
+                # print('test ', len(test_filenamesX))
 
-                        acc_test, loss, aucpred = sess.run([accruacy, net_loss, prediction], feed_dict=test_dict)
-                        print('accuracy  is %f' % acc_test)
+                test_batch, sphericityt, margint, lobulationt, spiculationt, test_label = \
+                    get_batch_withlabels(dir.npy_path, test_filenames)
+                test_dict = {x: test_batch, sphericity: sphericityt, margin: margint, lobulation: lobulationt,
+                             spiculation: spiculationt, real_label: test_label, keep_prob: 1.0}  # use 1.0 as keep_prob for testing
 
-                        if acc_test > highest_acc:
-                            highest_acc = acc_test
-                            highest_iterator = i
-                    epoch_end = time.time()
+                acc_test, loss, aucpred = sess.run([accruacy, net_loss, prediction], feed_dict=test_dict)
+                log('test accuracy is %f' % acc_test)
 
-            print("training finshed..highest accuracy is %f,the iterator is %d " % (highest_acc, highest_iterator))
+                train_batch, sphericityt, margint, lobulationt, spiculationt, test_label = \
+                    get_batch_withlabels(dir.npy_path, train_filenames)
+                train_dict = {x: train_batch, sphericity: sphericityt, margin: margint, lobulation: lobulationt,
+                             spiculation: spiculationt, real_label: test_label, keep_prob: 1.0}  # use 1.0 as keep_prob for testing
+
+                acc_train, loss, aucpred = sess.run([accruacy, net_loss, prediction], feed_dict=train_dict)
+                log('train accuracy is %f' % acc_train)

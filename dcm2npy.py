@@ -112,7 +112,7 @@ def angle_transpose(file,degree,flag_string):
         out = img.rotate(degree)
         newarr[depth,:,:] = np.array(out).reshape(array.shape[1],-1)[:,:]
     newarr = newarr.transpose(2, 1, 0)
-    print(newarr.shape)
+    # print(newarr.shape)
     np.save(file.replace(".npy",flag_string+".npy"),newarr)
 
 def transpose_all_npy(resdir):
@@ -124,8 +124,10 @@ def transpose_all_npy(resdir):
                 angle_transpose(resdir + onefile, 180, "_updown")
                 angle_transpose(resdir + onefile, 270, "_diagonal")
             elif 'low' in onefile:
+                angle_transpose(resdir + onefile, 90, "_leftright")
+                angle_transpose(resdir + onefile, 180, "_updown")
                 angle_transpose(resdir + onefile, 270, "_diagonal")
-            print('transpose %s successful', onefile)
+            print('transpose %s successful' % onefile)
         except BaseException as e:
             tools.err(onefile)
             tools.err(e)

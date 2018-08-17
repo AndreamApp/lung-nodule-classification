@@ -11,12 +11,6 @@ from sklearn.model_selection import train_test_split
 import numpy as np
 import tools
 
-basedir = tools.npy_path
-
-# 10477 - 10456
-
-datas = os.listdir(basedir)
-
 nodules = tools.get_nodules()
 '''
 id = 0
@@ -35,7 +29,7 @@ def get_high_data(path):
             returnlist.append(onefile)
     return returnlist
 
-def get_batch_withlabels_high(batch_filename):
+def get_batch_withlabels_high(basedir, batch_filename):
     '''
     get batch
     return data and label
@@ -81,7 +75,7 @@ def get_batch_withlabels_high(batch_filename):
     return np.array(batch_array), np.array(sphercity), np.array(margin), np.array(lobulation), np.array(spiculation), np.array(batch_label)
 
 
-def get_batch_withlabels(batch_filename):
+def get_batch_withlabels(basedir, batch_filename):
     '''
     get batch
     return data and label
@@ -124,7 +118,7 @@ def get_batch_withlabels(batch_filename):
 
 
 
-def get_batch(batch_filename):
+def get_batch(basedir, batch_filename):
     '''
     get batch
     return data and label

@@ -6,10 +6,13 @@ import csv
 
 ''' ---------- Path Config ---------- '''
 
-base_path = './truncate_350/'
-tensorboard_path = base_path + 'tensorboard/'
-ckpt_path = base_path + 'ckpt/ckpt'
-npy_path = base_path + 'NPY/'
+class workspace:
+    def __init__(self, base_path):
+        self.base_path = base_path
+        self.tensorboard_path = os.path.join(base_path, 'tensorboard/')
+        self.ckpt_path = os.path.join(base_path, 'ckpt/')
+        self.npy_path = os.path.join(base_path, 'NPY/')
+
 # data_path = 'E:/Andream/Lung/Data/LIDC-IDRI/DOI/'
 data_path = '/data0/LIDC/DOI/'
 
@@ -17,6 +20,17 @@ idscan_info_path = 'files/id_scan.txt'
 nodule_info_path = 'files/malignancy.csv'
 log_path = 'log/%s.txt' % datetime.datetime.now().strftime('%Y-%m-%d %H-%M-%S')
 err_path = 'log/error.txt'
+
+@property
+def base_dir():
+    return base_path
+
+@base_dir.setter
+def base_dir(path):
+    global base_path, tensorboard_path, ckpt_path, npy_path
+    base_path = path
+
+
 
 ''' ---------- File Tools ---------- '''
 
