@@ -1,0 +1,11 @@
+input npy dir: truncate_500_5808/NPY/
+cubic shape: (10, 20, 20)
+Training examples: 5803, high 1793, low 1793
+Testing examples: 645, high 223, low 223
+epoch: 80
+batch size: 32
+keep prob: 1.000000
+start time: 2018-08-18 12:42:39
+restored from: truncate_500_5808/ckpt_kp_1.0/ckpt-46
+test accuracy is 0.891473
+average train accuracy is 0.998455

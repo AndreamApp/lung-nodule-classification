@@ -119,11 +119,11 @@ def transpose_all_npy(resdir):
     filelist = os.listdir(resdir)
     for onefile in filelist:
         try:
-            if 'high' in onefile:
+            if 'high.npy' in onefile:
                 angle_transpose(resdir + onefile, 90, "_leftright")
                 angle_transpose(resdir + onefile, 180, "_updown")
                 angle_transpose(resdir + onefile, 270, "_diagonal")
-            elif 'low' in onefile:
+            elif 'low.npy' in onefile:
                 angle_transpose(resdir + onefile, 90, "_leftright")
                 angle_transpose(resdir + onefile, 180, "_updown")
                 angle_transpose(resdir + onefile, 270, "_diagonal")

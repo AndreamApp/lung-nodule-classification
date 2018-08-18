@@ -7,10 +7,10 @@ import csv
 ''' ---------- Path Config ---------- '''
 
 class workspace:
-    def __init__(self, base_path):
+    def __init__(self, base_path, keep_prob):
         self.base_path = base_path
         self.tensorboard_path = os.path.join(base_path, 'tensorboard/')
-        self.ckpt_path = os.path.join(base_path, 'ckpt/')
+        self.ckpt_path = os.path.join(base_path, 'ckpt_kp_%.1f/' % keep_prob)
         self.npy_path = os.path.join(base_path, 'NPY/')
 
 # data_path = 'E:/Andream/Lung/Data/LIDC-IDRI/DOI/'

@@ -1,0 +1,90 @@
+input npy dir: truncate_400_5808/NPY/
+cubic shape: (10, 20, 20)
+Training examples: 5803, high 1793, low 1793
+Testing examples: 645, high 223, low 223
+epoch: 80
+batch size: 32
+keep prob: 0.500000
+start time: 2018-08-18 09:54:54
+accuracy is 0.654264, loss is 0.587761, epoch 0 time, consumed 13.76 seconds
+accuracy is 0.683721, loss is 0.628390, epoch 1 time, consumed 11.68 seconds
+accuracy is 0.747287, loss is 0.573703, epoch 2 time, consumed 11.93 seconds
+accuracy is 0.778295, loss is 0.515604, epoch 3 time, consumed 11.30 seconds
+accuracy is 0.820155, loss is 0.452487, epoch 4 time, consumed 11.61 seconds
+accuracy is 0.827907, loss is 0.475621, epoch 5 time, consumed 11.66 seconds
+accuracy is 0.837209, loss is 0.468795, epoch 6 time, consumed 11.81 seconds
+accuracy is 0.826357, loss is 0.464705, epoch 7 time, consumed 11.60 seconds
+accuracy is 0.835659, loss is 0.434438, epoch 8 time, consumed 12.01 seconds
+accuracy is 0.841860, loss is 0.455696, epoch 9 time, consumed 11.51 seconds
+accuracy is 0.841860, loss is 0.427996, epoch 10 time, consumed 11.92 seconds
+accuracy is 0.851163, loss is 0.441507, epoch 11 time, consumed 12.03 seconds
+accuracy is 0.838760, loss is 0.446952, epoch 12 time, consumed 11.65 seconds
+accuracy is 0.846512, loss is 0.411697, epoch 13 time, consumed 11.95 seconds
+accuracy is 0.854264, loss is 0.453099, epoch 14 time, consumed 12.00 seconds
+accuracy is 0.846512, loss is 0.460509, epoch 15 time, consumed 11.83 seconds
+accuracy is 0.855814, loss is 0.406814, epoch 16 time, consumed 12.15 seconds
+accuracy is 0.846512, loss is 0.430755, epoch 17 time, consumed 11.61 seconds
+accuracy is 0.835659, loss is 0.397260, epoch 18 time, consumed 11.60 seconds
+accuracy is 0.844961, loss is 0.412839, epoch 19 time, consumed 11.36 seconds
+accuracy is 0.857364, loss is 0.411796, epoch 20 time, consumed 12.00 seconds
+accuracy is 0.855814, loss is 0.417383, epoch 21 time, consumed 11.31 seconds
+accuracy is 0.837209, loss is 0.415610, epoch 22 time, consumed 11.79 seconds
+accuracy is 0.869767, loss is 0.407435, epoch 23 time, consumed 11.64 seconds
+accuracy is 0.857364, loss is 0.421343, epoch 24 time, consumed 11.59 seconds
+accuracy is 0.854264, loss is 0.448957, epoch 25 time, consumed 11.97 seconds
+accuracy is 0.866667, loss is 0.363534, epoch 26 time, consumed 12.10 seconds
+accuracy is 0.866667, loss is 0.360740, epoch 27 time, consumed 12.16 seconds
+accuracy is 0.852713, loss is 0.387765, epoch 28 time, consumed 12.14 seconds
+accuracy is 0.868217, loss is 0.368248, epoch 29 time, consumed 12.05 seconds
+accuracy is 0.866667, loss is 0.386751, epoch 30 time, consumed 12.23 seconds
+accuracy is 0.868217, loss is 0.395460, epoch 31 time, consumed 11.87 seconds
+accuracy is 0.866667, loss is 0.414451, epoch 32 time, consumed 11.15 seconds
+accuracy is 0.871318, loss is 0.371420, epoch 33 time, consumed 12.20 seconds
+accuracy is 0.875969, loss is 0.381661, epoch 34 time, consumed 12.37 seconds
+accuracy is 0.868217, loss is 0.393207, epoch 35 time, consumed 11.60 seconds
+accuracy is 0.863566, loss is 0.404865, epoch 36 time, consumed 12.26 seconds
+accuracy is 0.871318, loss is 0.344385, epoch 37 time, consumed 12.32 seconds
+accuracy is 0.865116, loss is 0.351737, epoch 38 time, consumed 12.44 seconds
+accuracy is 0.865116, loss is 0.387477, epoch 39 time, consumed 11.56 seconds
+accuracy is 0.874419, loss is 0.366046, epoch 40 time, consumed 11.61 seconds
+accuracy is 0.858915, loss is 0.359316, epoch 41 time, consumed 11.66 seconds
+accuracy is 0.860465, loss is 0.360973, epoch 42 time, consumed 12.02 seconds
+accuracy is 0.879070, loss is 0.353263, epoch 43 time, consumed 12.14 seconds
+accuracy is 0.863566, loss is 0.372777, epoch 44 time, consumed 11.78 seconds
+accuracy is 0.860465, loss is 0.346496, epoch 45 time, consumed 12.26 seconds
+accuracy is 0.869767, loss is 0.389149, epoch 46 time, consumed 12.07 seconds
+accuracy is 0.869767, loss is 0.373902, epoch 47 time, consumed 11.74 seconds
+accuracy is 0.869767, loss is 0.346744, epoch 48 time, consumed 12.15 seconds
+accuracy is 0.866667, loss is 0.387388, epoch 49 time, consumed 12.16 seconds
+accuracy is 0.852713, loss is 0.366978, epoch 50 time, consumed 11.31 seconds
+accuracy is 0.852713, loss is 0.395770, epoch 51 time, consumed 11.33 seconds
+accuracy is 0.879070, loss is 0.340120, epoch 52 time, consumed 11.99 seconds
+accuracy is 0.875969, loss is 0.349320, epoch 53 time, consumed 11.68 seconds
+accuracy is 0.863566, loss is 0.379143, epoch 54 time, consumed 11.98 seconds
+accuracy is 0.857364, loss is 0.353868, epoch 55 time, consumed 12.00 seconds
+accuracy is 0.868217, loss is 0.349380, epoch 56 time, consumed 11.92 seconds
+accuracy is 0.862015, loss is 0.369468, epoch 57 time, consumed 12.15 seconds
+accuracy is 0.851163, loss is 0.371183, epoch 58 time, consumed 11.94 seconds
+accuracy is 0.879070, loss is 0.371142, epoch 59 time, consumed 11.97 seconds
+accuracy is 0.871318, loss is 0.354096, epoch 60 time, consumed 12.03 seconds
+accuracy is 0.866667, loss is 0.346071, epoch 61 time, consumed 12.03 seconds
+accuracy is 0.848062, loss is 0.387568, epoch 62 time, consumed 12.00 seconds
+accuracy is 0.877519, loss is 0.347355, epoch 63 time, consumed 12.12 seconds
+accuracy is 0.862015, loss is 0.340852, epoch 64 time, consumed 12.08 seconds
+accuracy is 0.843411, loss is 0.348338, epoch 65 time, consumed 12.29 seconds
+accuracy is 0.871318, loss is 0.342564, epoch 66 time, consumed 12.04 seconds
+accuracy is 0.855814, loss is 0.347412, epoch 67 time, consumed 11.75 seconds
+accuracy is 0.849612, loss is 0.353944, epoch 68 time, consumed 11.95 seconds
+accuracy is 0.829457, loss is 0.381669, epoch 69 time, consumed 12.42 seconds
+accuracy is 0.860465, loss is 0.356104, epoch 70 time, consumed 11.58 seconds
+accuracy is 0.874419, loss is 0.337195, epoch 71 time, consumed 11.59 seconds
+accuracy is 0.863566, loss is 0.378556, epoch 72 time, consumed 11.74 seconds
+accuracy is 0.852713, loss is 0.377286, epoch 73 time, consumed 12.03 seconds
+accuracy is 0.849612, loss is 0.355352, epoch 74 time, consumed 12.05 seconds
+accuracy is 0.879070, loss is 0.335917, epoch 75 time, consumed 12.06 seconds
+accuracy is 0.872868, loss is 0.330648, epoch 76 time, consumed 11.84 seconds
+accuracy is 0.832558, loss is 0.388541, epoch 77 time, consumed 11.82 seconds
+accuracy is 0.848062, loss is 0.354588, epoch 78 time, consumed 11.74 seconds
+accuracy is 0.869767, loss is 0.324058, epoch 79 time, consumed 12.09 seconds
+training finshed. highest accuracy is 0.879070, the iterator is 43 
+end time: 2018-08-18 10:11:46

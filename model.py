@@ -14,7 +14,6 @@ import tensorflow as tf
 from dataprepare import get_batch, get_train_and_test_filename, get_batch_withlabels, get_high_data, \
     get_batch_withlabels_high
 import random
-import sys
 import time
 import datetime
 import os
@@ -105,12 +104,12 @@ class model(object):
             # print(out_fc2)
             return out_fc2
 
-    def inference(self, base_dir, model_index, test_size, seed, train_flag=True, test_iterator=80):
+    def inference(self, base_dir, model_index, test_size, seed, train_flag=True):
         # some statistic index
         highest_acc = 0.0
         highest_iterator = 1
 
-        dir = tools.workspace(base_dir)
+        dir = tools.workspace(base_dir, self.keep_prob)
 
         train_filenames, test_filenames = get_train_and_test_filename(dir.npy_path, test_size, seed)
         # how many time should one epoch should loop to feed all data
@@ -118,12 +117,14 @@ class model(object):
         if (len(train_filenames) % self.batch_size) != 0:
             times = times + 1
 
+        tf.logging.set_verbosity(tf.logging.ERROR)
         log('input npy dir: %s' % dir.npy_path)
         log('cubic shape: (%d, %d, %d)' % (self.cubic_shape[model_index][0], self.cubic_shape[model_index][1], self.cubic_shape[model_index][2]))
         log("Training examples: %d, high %d, low %d" % (len(train_filenames), count_high(train_filenames), count_low(train_filenames)))
         log("Testing examples: %d, high %d, low %d" % (len(test_filenames), count_high(test_filenames), count_low(test_filenames)))
         log('epoch: %d' % self.epoch)
         log('batch size: %d' % self.batch_size)
+        log('keep prob: %f' % self.keep_prob)
         logtime('start time: ')
         # keep_prob used for dropout
         keep_prob = tf.placeholder(tf.float32)
@@ -187,9 +188,7 @@ class model(object):
                     random.shuffle(train_filenames)
                     # times = 5
                     for t in range(times):
-                        if t % 10 == 0:
-                            print(t, ' ', end='')
-                            sys.stdout.flush()
+                        print('\r', ('%d/%d' % (t+1, times)).ljust(10), end='', flush=True)
 
                         batch_files = train_filenames[t * self.batch_size:(t + 1) * self.batch_size]
                         batch_data, sphericityt, margint, lobulationt, spiculationt, batch_label = \
@@ -203,9 +202,9 @@ class model(object):
                         # feed_dict = {global_step: t + i * times}
                         lnrt = sess.run(learning_rate, feed_dict={global_step: t + i * times})
                         if t == times - 1:
-                            print('\nlearning rate: ', lnrt)
+                            print('\r---------------------------------------------------')
+                            print('learning rate: ', lnrt)
                         train_writer.add_summary(summary, i)
-                        saver.save(sess, dir.ckpt_path + 'ckpt', global_step=i + 1)
 
                     epoch_end = time.time()
                     # randomtestfiles = random.sample(test_filenames, 32)
@@ -235,10 +234,10 @@ class model(object):
                     if acc_test > highest_acc:
                         highest_acc = acc_test
                         highest_iterator = i
+                        saver.save(sess, dir.ckpt_path + 'ckpt', global_step=i + 1)
             log('training finshed. highest accuracy is %f, the iterator is %d ' % (highest_acc, highest_iterator))
             logtime('end time: ')
         else:
-            print("restore model")
             # softmax layer
             real_label = tf.placeholder(tf.float32, [None, 2])
             cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=net_out, labels=real_label)
@@ -259,10 +258,11 @@ class model(object):
                 # sess = tf_debug.LocalCLIDebugWrapperSession(sess)
                 # sess.add_tensor_filter("has_inf_or_nan", tf_debug.has_inf_or_nan)
                 sess.run(tf.global_variables_initializer())
-                meta_path = dir.ckpt_path + 'ckpt-%d.meta' % test_iterator
-                print('meta_path: ', meta_path)
+                save_path = tf.train.latest_checkpoint(dir.ckpt_path)
+                meta_path = save_path + '.meta'
+                log("restored from: %s" % save_path)
                 saver = tf.train.import_meta_graph(meta_path)
-                saver.restore(sess, tf.train.latest_checkpoint(dir.ckpt_path))
+                saver.restore(sess, save_path)
                 # test_filenames = get_high_data(npy_path)
                 # test_filenamesX = []
                 # for onefile in test_filenames:
@@ -282,10 +282,17 @@ class model(object):
                 acc_test, loss, aucpred = sess.run([accruacy, net_loss, prediction], feed_dict=test_dict)
                 log('test accuracy is %f' % acc_test)
 
-                train_batch, sphericityt, margint, lobulationt, spiculationt, test_label = \
-                    get_batch_withlabels(dir.npy_path, train_filenames)
-                train_dict = {x: train_batch, sphericity: sphericityt, margin: margint, lobulation: lobulationt,
-                             spiculation: spiculationt, real_label: test_label, keep_prob: 1.0}  # use 1.0 as keep_prob for testing
+                acc_train_avg = 0
+                for t in range(times):
+                    batch_files = train_filenames[t * self.batch_size:(t + 1) * self.batch_size]
 
-                acc_train, loss, aucpred = sess.run([accruacy, net_loss, prediction], feed_dict=train_dict)
-                log('train accuracy is %f' % acc_train)
+                    train_batch, sphericityt, margint, lobulationt, spiculationt, test_label = \
+                        get_batch_withlabels(dir.npy_path, batch_files)
+                    train_dict = {x: train_batch, sphericity: sphericityt, margin: margint, lobulation: lobulationt,
+                                 spiculation: spiculationt, real_label: test_label, keep_prob: 1.0}  # use 1.0 as keep_prob for testing
+
+                    acc_train, loss, aucpred = sess.run([accruacy, net_loss, prediction], feed_dict=train_dict)
+                    # log('train accuracy is %f in batch %d' % (acc_train, t))
+                    acc_train_avg += acc_train
+                acc_train_avg /= times
+                log('average train accuracy is %f' % acc_train_avg)

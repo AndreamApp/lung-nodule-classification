@@ -18,7 +18,7 @@ $ python3 main.py -g 2 -p truncate_400 -t 80  # 指定使用第三块GPU，文�
 gpu = '3'
 base_path = ''
 train_flag = True
-test_iterator = 80
+keep_prob = 1.0
 for i in range(len(sys.argv)):
     if '-g' == sys.argv[i]:
         gpu = sys.argv[i+1]
@@ -26,14 +26,15 @@ for i in range(len(sys.argv)):
         base_path = sys.argv[i+1]
     elif '-t' == sys.argv[i]:
         train_flag = False
-        test_iterator = int(sys.argv[i+1])
+    elif '-k' == sys.argv[i]:
+        keep_prob = float(sys.argv[i+1])
 
 os.environ["CUDA_VISIBLE_DEVICES"] = gpu
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 if __name__ == '__main__':
     batch_size = 32
     learning_rate = 0.01
-    keep_prob = 0.7
     epoch = 80
     # path = '/data0/LUNA/cubic_normalization_npy'
 
@@ -43,4 +44,4 @@ if __name__ == '__main__':
 
     print(" begin...")
     model = model(learning_rate, keep_prob, batch_size, epoch)
-    model.inference(base_path, 0, test_size, seed, train_flag, test_iterator)
+    model.inference(base_path, 0, test_size, seed, train_flag)

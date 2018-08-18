@@ -1,0 +1,10 @@
+input npy dir: truncate_400_5808/NPY/
+cubic shape: (10, 20, 20)
+Training examples: 5803, high 1793, low 1793
+Testing examples: 645, high 223, low 223
+epoch: 80
+batch size: 32
+keep prob: 1.000000
+start time: 2018-08-18 12:48:30
+accuracy is 0.731783, loss is 0.574558, epoch 0 time, consumed 18.87 seconds
+accuracy is 0.786047, loss is 0.564622, epoch 1 time, consumed 16.51 seconds
