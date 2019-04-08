@@ -19,6 +19,63 @@ import datetime
 import os
 import tools
 from tools import log, logtime, count_high, count_low
+from tensorflow.python.util import nest
+
+def slicing_where(condition, full_input, true_branch, false_branch):
+    """Split `full_input` between `true_branch` and `false_branch` on `condition`.
+     Args:
+      condition: A boolean Tensor with shape [B_1, ..., B_N].
+      full_input: A Tensor or nested tuple of Tensors of any dtype, each with
+        shape [B_1, ..., B_N, ...], to be split between `true_branch` and
+        `false_branch` based on `condition`.
+      true_branch: A function taking a single argument, that argument having the
+        same structure and number of batch dimensions as `full_input`. Receives
+        slices of `full_input` corresponding to the True entries of
+        `condition`. Returns a Tensor or nested tuple of Tensors, each with batch
+        dimensions matching its inputs.
+      false_branch: Like `true_branch`, but receives inputs corresponding to the
+        false elements of `condition`. Returns a Tensor or nested tuple of Tensors
+        (with the same structure as the return value of `true_branch`), but with
+        batch dimensions matching its inputs.
+    Returns:
+      Interleaved outputs from `true_branch` and `false_branch`, each Tensor
+      having shape [B_1, ..., B_N, ...].
+    """
+    full_input_flat = nest.flatten(full_input)
+    true_indices = tf.where(condition)
+    false_indices = tf.where(tf.logical_not(condition))
+    true_branch_inputs = nest.pack_sequence_as(
+        structure=full_input,
+        flat_sequence=[tf.gather_nd(params=input_tensor, indices=true_indices)
+                       for input_tensor in full_input_flat])
+    false_branch_inputs = nest.pack_sequence_as(
+        structure=full_input,
+        flat_sequence=[tf.gather_nd(params=input_tensor, indices=false_indices)
+                       for input_tensor in full_input_flat])
+    true_outputs = true_branch(true_branch_inputs)
+    false_outputs = false_branch(false_branch_inputs)
+    nest.assert_same_structure(true_outputs, false_outputs)
+    def scatter_outputs(true_output, false_output):
+        batch_shape = tf.shape(condition)
+        scattered_shape = tf.concat(
+            [batch_shape, tf.shape(true_output)[tf.rank(batch_shape):]],
+            0)
+        true_scatter = tf.scatter_nd(
+            indices=tf.cast(true_indices, tf.int32),
+            updates=true_output,
+            shape=scattered_shape)
+        false_scatter = tf.scatter_nd(
+            indices=tf.cast(false_indices, tf.int32),
+            updates=false_output,
+            shape=scattered_shape)
+        return true_scatter + false_scatter
+    result = nest.pack_sequence_as(
+        structure=true_outputs,
+        flat_sequence=[
+            scatter_outputs(true_single_output, false_single_output)
+            for true_single_output, false_single_output
+            in zip(nest.flatten(true_outputs), nest.flatten(false_outputs))])
+    return result
 
 class model(object):
 
@@ -100,113 +157,18 @@ class model(object):
             tf.summary.scalar('out_fc1_shape', tf.shape(out_fc1)[0])
             return out_fc2
     
-    def train_selnet(self, base_dir, model_index, test_size, seed):
-        dir = tools.workspace(base_dir, self.keep_prob)
-
-        train_filenames, test_filenames = get_train_and_test_filename(dir.npy_path, test_size, seed)
-
-        # how many time should one epoch should loop to feed all data
-        times = len(train_filenames) // self.batch_size
-        if (len(train_filenames) % self.batch_size) != 0:
-            times = times + 1
-
-        tf.logging.set_verbosity(tf.logging.ERROR)
-        tools.open_log_file('log/%s_kp_%.1f.txt' % (base_dir.replace('/NPY/', ''), self.keep_prob))
-        log('input npy dir: %s' % dir.npy_path)
-        log('cubic shape: (%d, %d, %d)' % (self.cubic_shape[model_index][0], self.cubic_shape[model_index][1], self.cubic_shape[model_index][2]))
-        log("Training examples: %d, high %d, low %d" % (len(train_filenames), count_high(train_filenames), count_low(train_filenames)))
-        log("Testing examples: %d, high %d, low %d" % (len(test_filenames), count_high(test_filenames), count_low(test_filenames)))
-        log('epoch: %d' % self.epoch)
-        log('batch size: %d' % self.batch_size)
-        log('keep prob: %f' % self.keep_prob)
-        logtime('start time: ')
-        # keep_prob used for dropout
-        keep_prob = tf.placeholder(tf.float32)
-        # take placeholder as input
-        x = tf.placeholder(tf.float32, [None, self.cubic_shape[model_index][0], self.cubic_shape[model_index][1],
-                                        self.cubic_shape[model_index][2]])
-        x_image = tf.reshape(x, [-1, self.cubic_shape[model_index][0], self.cubic_shape[model_index][1],
-                                 self.cubic_shape[model_index][2], 1])
-        selnet, net_out = self.fusion(x_image)
-        
-        # save all epoch results
-        saver = tf.train.Saver(max_to_keep=self.epoch)  # default to save all variable,save mode or restore from path
-
-        global_step = tf.Variable(0)
-
-        learning_rate = tf.train.exponential_decay(0.01, global_step, times * 40, 1, staircase=True)
-
-        # softmax layer
-        real_label = tf.placeholder(tf.float32, [None, 2])
-        cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=net_out, labels=real_label)
-        # cross_entropy = -tf.reduce_sum(real_label * tf.log(net_out))
-        net_loss = tf.reduce_mean(cross_entropy)
-
-        train_step = tf.train.MomentumOptimizer(learning_rate, 0.9).minimize(net_loss)
-
-        prediction = tf.nn.sigmoid(net_out)
-        correct_prediction = tf.equal(tf.argmax(prediction, 1), tf.argmax(real_label, 1))
-        accruacy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-        merged = tf.summary.merge_all()
-
-        # allow memory allocation growth
-        config = tf.ConfigProto()
-        config.gpu_options.per_process_gpu_memory_fraction = 0.3
-        config.gpu_options.allow_growth = True
-        with tf.Session(config=config) as sess:
-            # sess = tf_debug.LocalCLIDebugWrapperSession(sess)
-            # sess.add_tensor_filter("has_inf_or_nan", tf_debug.has_inf_or_nan)
-            sess.run(tf.global_variables_initializer())
-            train_writer = tf.summary.FileWriter(dir.tensorboard_path, sess.graph)
-            # loop epoches
-            for i in range(self.epoch):
-                epoch_start = time.time()
-                random.shuffle(train_filenames)
-                for t in range(times):
-                    print('\r', ('%d/%d' % (t+1, times)).ljust(10), end='', flush=True)
-
-                    batch_files = train_filenames[t * self.batch_size:(t + 1) * self.batch_size]
-                    batch_data, batch_label, batch_path = \
-                        get_selnet_batch(dir.npy_path, batch_files)
-                    feed_dict = {x: batch_data, real_label: batch_label, keep_prob: self.keep_prob}
-                    _, summary, out_res = sess.run([train_step, merged, net_out], feed_dict=feed_dict)
-                    
-                    train_writer.add_summary(summary, i)
-
-                epoch_end = time.time()
-                
-                test_batch, test_label, batch_path = \
-                    get_selnet_batch(dir.npy_path, test_filenames)
-                
-
-                x10 = 0
-                x01 = 0
-                for label in test_label:
-                    if label[0] == 1:
-                        x10 += 1
-                    else:
-                        x01 += 1
-                print('percent: ', x10 / len(test_label))
-                
-                test_dict = {x: test_batch, real_label: test_label, keep_prob: 1.0}  # use 1.0 as keep_prob for testing
-                pred, acc_test, loss = sess.run([tf.argmax(prediction, 1), accruacy, net_loss], feed_dict=test_dict)
-
-                # print(pred)
-                log('accuracy is %f, loss is %f, epoch %d time, consumed %.2f seconds' %
-                    (acc_test, loss, i, (epoch_end - epoch_start)))
-                # estimate end time
-                end_time = datetime.datetime.now() + datetime.timedelta(seconds=(epoch_end - epoch_start) * (self.epoch - i - 1))
-                print('will end at %s' % end_time.strftime('%H:%M:%S'))
-
-                saver.save(sess, os.path.join(base_dir, 'ckpt_selnet/') + 'ckpt', global_step=i + 1)
-        logtime('end time: ')
-
-    def fusion(self, input, input1, input2):
+    def fusion(self, input):
         selnet = self.select(input)
         selection = tf.argmax(tf.nn.sigmoid(selnet), 1)
 
-        out = tf.cond(\
-            tf.equal(tf.reshape(selection, []), 0), lambda: selnet, lambda: selnet)
+        # arch1 = self.archi_1(input)
+        # arch2 = self.archi_2(input)
+
+        out = slicing_where(
+            condition=tf.equal(selection, 0),
+            full_input=input,
+            true_branch=lambda x: self.archi_1(x),
+            false_branch=lambda x: self.archi_2(x))
         return selnet, out
 
 
@@ -255,7 +217,7 @@ class model(object):
                                  self.cubic_shape[model_index][2], 1])
         x_image2 = tf.reshape(x2, [-1, self.cubic_shape[model_index][0], self.cubic_shape[model_index][1],
                                  self.cubic_shape[model_index][2], 1])
-        selnet, net_out = self.fusion(x_image, x_image1, x_image2)
+        selnet, net_out = self.fusion(x_image)
         # print(net_out)
         # save all epoch results
         saver = tf.train.Saver(max_to_keep=self.epoch)  # default to save all variable,save mode or restore from path
@@ -299,7 +261,7 @@ class model(object):
                         batch_files = train_filenames[t * self.batch_size:(t + 1) * self.batch_size]
                         batch_data, batch_label, batch_path = \
                             get_selnet_batch(dir.npy_path, batch_files)
-                        feed_dict = {x: batch_data, x1: batch_data, x2: batch_data, real_label: batch_label, keep_prob: self.keep_prob}
+                        feed_dict = {x: batch_data, real_label: batch_label, keep_prob: self.keep_prob}
                         _, summary, out_res = sess.run([train_step, merged, net_out], feed_dict=feed_dict)
                         # print(len(out_res))
                         # print(out_res[0])
@@ -326,7 +288,7 @@ class model(object):
                             x01 += 1
                     print('percent: ', x10 / len(test_label))
                     # f.write('percent: %f ' % x10 / 16)
-                    test_dict = {x: test_batch, x1: test_batch, x2: test_batch, real_label: test_label, keep_prob: 1.0}  # use 1.0 as keep_prob for testing
+                    test_dict = {x: test_batch, real_label: test_label, keep_prob: 1.0}  # use 1.0 as keep_prob for testing
                     pred, acc_test, loss = sess.run([tf.argmax(prediction, 1), accruacy, net_loss], feed_dict=test_dict)
 
                     # print(pred)
