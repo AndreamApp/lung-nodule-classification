@@ -46,7 +46,26 @@ class model(object):
 
     def archi_1(self, input):
         # return out_fc2
-        with tf.name_scope("Archi-1"):
+        with tf.name_scope("Archi1"):
+            out_conv1 = self.CNN(input, [3, 5, 5, 1, 64])
+            hidden_conv1 = tf.nn.max_pool3d(out_conv1, strides=[1, 1, 1, 1, 1], ksize=[1, 1, 1, 1, 1], padding='SAME')
+            out_conv2 = self.CNN(out_conv1, [3, 5, 5, 64, 128])
+            out_conv3 = self.CNN(out_conv2, [3, 5, 5, 128, 256])
+            out_conv4 = self.CNN(out_conv3, [1, 1, 1, 256, 256])
+            
+            out_conv4 = tf.reshape(out_conv4, [-1, 256 * 8 * 8 * 4])
+            out_fc1 = self.FC(out_conv4, [256 * 8 * 8 * 4, 200])
+            out_fc2 = self.FC(out_fc1, [200, 2])
+
+            out_conv4_shape = tf.shape(out_conv4)
+            tf.summary.scalar('out_conv4_shape', tf.shape(out_conv3)[0])
+            out_fc1_shape = tf.shape(out_fc1)
+            tf.summary.scalar('out_fc1_shape', tf.shape(out_fc1)[0])
+            return out_fc2
+
+    def archi_2(self, input):
+        # return out_fc2
+        with tf.name_scope("Archi2"):
             out_conv1 = self.CNN(input, [3, 5, 5, 1, 64])
             hidden_conv1 = tf.nn.max_pool3d(out_conv1, strides=[1, 1, 1, 1, 1], ksize=[1, 1, 1, 1, 1], padding='SAME')
             out_conv2 = self.CNN(out_conv1, [3, 5, 5, 64, 128])
@@ -108,7 +127,7 @@ class model(object):
                                         self.cubic_shape[model_index][2]])
         x_image = tf.reshape(x, [-1, self.cubic_shape[model_index][0], self.cubic_shape[model_index][1],
                                  self.cubic_shape[model_index][2], 1])
-        net_out = self.select(x_image)
+        selnet, net_out = self.fusion(x_image)
         
         # save all epoch results
         saver = tf.train.Saver(max_to_keep=self.epoch)  # default to save all variable,save mode or restore from path
@@ -182,22 +201,13 @@ class model(object):
                 saver.save(sess, os.path.join(base_dir, 'ckpt_selnet/') + 'ckpt', global_step=i + 1)
         logtime('end time: ')
 
-    def fusion(self, input):
+    def fusion(self, input, input1, input2):
         selnet = self.select(input)
         selection = tf.argmax(tf.nn.sigmoid(selnet), 1)
 
-        arch1 = self.archi_1(input)
-        real_label1 = tf.placeholder(tf.float32, [None, 2])
-        cross_entropy1 = tf.nn.softmax_cross_entropy_with_logits(logits=arch1, labels=real_label1)
-        net_loss1 = tf.reduce_mean(cross_entropy1)
-
-        arch2 = self.archi_1(input)
-        real_label2 = tf.placeholder(tf.float32, [None, 2])
-        cross_entropy2 = tf.nn.softmax_cross_entropy_with_logits(logits=arch2, labels=real_label2)
-        net_loss2 = tf.reduce_mean(cross_entropy2)
-        
-        general_loss = tf.cond(tf.equal(selection, 0), lambda: net_loss1, lambda: net_loss2)
-        return general_loss
+        out = tf.cond(\
+            tf.equal(tf.reshape(selection, []), 0), lambda: selnet, lambda: selnet)
+        return selnet, out
 
 
     def inference(self, base_dir, model_index, test_size, seed, train_flag=True):
@@ -229,6 +239,10 @@ class model(object):
         # take placeholder as input
         x = tf.placeholder(tf.float32, [None, self.cubic_shape[model_index][0], self.cubic_shape[model_index][1],
                                         self.cubic_shape[model_index][2]])
+        x1 = tf.placeholder(tf.float32, [None, self.cubic_shape[model_index][0], self.cubic_shape[model_index][1],
+                                        self.cubic_shape[model_index][2]])
+        x2 = tf.placeholder(tf.float32, [None, self.cubic_shape[model_index][0], self.cubic_shape[model_index][1],
+                                        self.cubic_shape[model_index][2]])
 
         sphericity = tf.placeholder(tf.float32)
         margin = tf.placeholder(tf.float32)
@@ -237,7 +251,11 @@ class model(object):
 
         x_image = tf.reshape(x, [-1, self.cubic_shape[model_index][0], self.cubic_shape[model_index][1],
                                  self.cubic_shape[model_index][2], 1])
-        net_out = self.select(x_image)
+        x_image1 = tf.reshape(x1, [-1, self.cubic_shape[model_index][0], self.cubic_shape[model_index][1],
+                                 self.cubic_shape[model_index][2], 1])
+        x_image2 = tf.reshape(x2, [-1, self.cubic_shape[model_index][0], self.cubic_shape[model_index][1],
+                                 self.cubic_shape[model_index][2], 1])
+        selnet, net_out = self.fusion(x_image, x_image1, x_image2)
         # print(net_out)
         # save all epoch results
         saver = tf.train.Saver(max_to_keep=self.epoch)  # default to save all variable,save mode or restore from path
@@ -281,7 +299,7 @@ class model(object):
                         batch_files = train_filenames[t * self.batch_size:(t + 1) * self.batch_size]
                         batch_data, batch_label, batch_path = \
                             get_selnet_batch(dir.npy_path, batch_files)
-                        feed_dict = {x: batch_data, real_label: batch_label, keep_prob: self.keep_prob}
+                        feed_dict = {x: batch_data, x1: batch_data, x2: batch_data, real_label: batch_label, keep_prob: self.keep_prob}
                         _, summary, out_res = sess.run([train_step, merged, net_out], feed_dict=feed_dict)
                         # print(len(out_res))
                         # print(out_res[0])
@@ -308,7 +326,7 @@ class model(object):
                             x01 += 1
                     print('percent: ', x10 / len(test_label))
                     # f.write('percent: %f ' % x10 / 16)
-                    test_dict = {x: test_batch, real_label: test_label, keep_prob: 1.0}  # use 1.0 as keep_prob for testing
+                    test_dict = {x: test_batch, x1: test_batch, x2: test_batch, real_label: test_label, keep_prob: 1.0}  # use 1.0 as keep_prob for testing
                     pred, acc_test, loss = sess.run([tf.argmax(prediction, 1), accruacy, net_loss], feed_dict=test_dict)
 
                     # print(pred)
